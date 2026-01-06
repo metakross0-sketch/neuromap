@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог магазина</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            --bg-secondary: rgba(30, 41, 59, 0.95);
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(255, 255, 255, 0.15);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --hover-bg: rgba(255, 255, 255, 0.08);
+            --button-color: #3B82F6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        #app {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Хедер */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Хлебные крошки */
+        .breadcrumb {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .breadcrumb-item {
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .breadcrumb-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-secondary);
+        }
+
+        /* Сетка товаров/категорий */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 640px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* Карточка категории */
+        .category-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .category-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow-color);
+            background: var(--hover-bg);
+        }
+
+        .category-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .category-card .count {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Карточка товара */
+        .product-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--shadow-color);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-color {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .product-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--button-color);
+        }
+
+        /* Модальное окно товара */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .modal-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .modal-details .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-details .label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .modal-details .value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-description {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Загрузка */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--button-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Пустое состояние */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Хедер -->
+        <div class="header">
+            <h1 id="shop-name">Загрузка...</h1>
+            <button class="back-btn" onclick="goBack()">← Назад</button>
+        </div>
+
+        <!-- Хлебные крошки -->
+        <div class="breadcrumb" id="breadcrumb"></div>
+
+        <!-- Контент -->
+        <div id="content" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Модальное окно товара -->
+        <div class="modal" id="product-modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeModal()">×</button>
+                <img id="modal-image" class="modal-image" src="" alt="">
+                <div class="modal-details" id="modal-details"></div>
+                <div class="modal-description" id="modal-description" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Данные приложения
+        let catalogData = null;
+        let shopInfo = null;
+        let navigationPath = [];
+
+        // Загрузка данных из localStorage
+        function loadData() {
+            const storedCatalog = localStorage.getItem('shopCatalog');
+            const storedShop = localStorage.getItem('shopInfo');
+
+            if (storedCatalog && storedShop) {
+                try {
+                    catalogData = JSON.parse(storedCatalog);
+                    shopInfo = JSON.parse(storedShop);
+                    document.getElementById('shop-name').textContent = shopInfo.name || 'Магазин';
+                    
+                    if (catalogData && Object.keys(catalogData).length > 0) {
+                        showSections();
+                    } else {
+                        document.getElementById('content').innerHTML = 
+                            '<div class="empty-state"><p>Каталог пуст</p></div>';
+                    }
+                } catch (error) {
+                    document.getElementById('content').innerHTML = 
+                        '<div class="empty-state"><p>Ошибка загрузки данных</p></div>';
+                }
+            } else {
+                document.getElementById('content').innerHTML = 
+                    '<div class="empty-state"><p>Данные магазина не найдены</p></div>';
+            }
+        }
+
+        // Показ разделов
+        function showSections() {
+            navigationPath = [];
+            updateBreadcrumb();
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.className = 'grid';
+
+            const sections = Object.keys(catalogData);
+            
+            if (sections.length === 0) {
+                content.innerHTML = '<div class="empty-state"><p>Каталог пуст</p></div>';
+                return;
+            }
+
+            sections.forEach(section => {
+                const count = countItems(catalogData[section]);
+                const card = createCategoryCard(section, count, () => showCategories(section));
+                content.appendChild(card);
+            });
+        }
+
+        // Показ категорий
+        function showCategories(section) {
+            navigationPath = [section];
+            updateBreadcrumb();
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.className = 'grid';
+
+            const categories = Object.keys(catalogData[section]);
+
+            categories.forEach(category => {
+                const count = countItems(catalogData[section][category]);
+                const card = createCategoryCard(category, count, 
+                    () => showModels(section, category));
+                content.appendChild(card);
+            });
+        }
+
+        // Показ моделей
+        function showModels(section, category) {
+            navigationPath = [section, category];
+            updateBreadcrumb();
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.className = 'grid';
+
+            const models = Object.keys(catalogData[section][category]);
+
+            models.forEach(model => {
+                const modelData = catalogData[section][category][model];
+                const submodels = Object.keys(modelData);
+                
+                // Если есть только одна пустая подмодель - показываем товары сразу
+                if (submodels.length === 1 && submodels[0] === "") {
+                    const products = modelData[""];
+                    const count = products.length;
+                    const card = createCategoryCard(model, count, 
+                        () => showProducts(section, category, model, ""));
+                    content.appendChild(card);
+                } else {
+                    const count = countItems(modelData);
+                    const card = createCategoryCard(model, count, 
+                        () => showSubmodels(section, category, model));
+                    content.appendChild(card);
+                }
+            });
+        }
+
+        // Показ подмоделей
+        function showSubmodels(section, category, model) {
+            navigationPath = [section, category, model];
+            updateBreadcrumb();
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.className = 'grid';
+
+            const submodels = Object.keys(catalogData[section][category][model]);
+
+            submodels.forEach(submodel => {
+                const products = catalogData[section][category][model][submodel];
+                const count = products.length;
+                const card = createCategoryCard(submodel, count, 
+                    () => showProducts(section, category, model, submodel));
+                content.appendChild(card);
+            });
+        }
+
+        // Показ товаров
+        function showProducts(section, category, model, submodel) {
+            // Если подмодель пустая, не добавляем её в путь
+            if (submodel === "") {
+                navigationPath = [section, category, model];
+            } else {
+                navigationPath = [section, category, model, submodel];
+            }
+            updateBreadcrumb();
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            content.className = 'grid';
+
+            const products = catalogData[section][category][model][submodel];
+
+            if (products.length === 0) {
+                content.innerHTML = '<div class="empty-state"><p>Товары не найдены</p></div>';
+                return;
+            }
+
+            products.forEach((product, index) => {
+                const card = createProductCard(product, () => showProductModal(product));
+                content.appendChild(card);
+            });
+        }
+
+        // Создание карточки категории
+        function createCategoryCard(name, count, onClick) {
+            const card = document.createElement('div');
+            card.className = 'category-card';
+            card.innerHTML = `
+                <h3>${name}</h3>
+                <div class="count">${count} ${count === 1 ? 'товар' : 'товаров'}</div>
+            `;
+            card.onclick = onClick;
+            return card;
+        }
+
+        // Создание карточки товара
+        function createProductCard(product, onClick) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                ${product.photo_url ? 
+                    `<img class="product-image" src="${product.photo_url}" alt="${product.color || 'Товар'}">` : 
+                    '<div class="product-image"></div>'}
+                <div class="product-info">
+                    <div class="product-color">${product.color || 'Без названия'}</div>
+                    <div class="product-price">${product.price || 'Цена не указана'}</div>
+                </div>
+            `;
+            card.onclick = onClick;
+            return card;
+        }
+
+        // Показ модального окна товара
+        function showProductModal(product) {
+            const modal = document.getElementById('product-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalDetails = document.getElementById('modal-details');
+            const modalDescription = document.getElementById('modal-description');
+
+            // Изображение
+            if (product.photo_url) {
+                modalImage.src = product.photo_url;
+                modalImage.style.display = 'block';
+            } else {
+                modalImage.style.display = 'none';
+            }
+
+            // Детали
+            modalDetails.innerHTML = `
+                <div class="detail-row">
+                    <span class="label">Цвет/Название:</span>
+                    <span class="value">${product.color || '-'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Цена:</span>
+                    <span class="value">${product.price || '-'}</span>
+                </div>
+            `;
+
+            // Описание
+            if (product.user_description) {
+                modalDescription.textContent = product.user_description;
+                modalDescription.style.display = 'block';
+            } else {
+                modalDescription.style.display = 'none';
+            }
+
+            modal.classList.add('show');
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('product-modal').classList.remove('show');
+        }
+
+        // Обновление хлебных крошек
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = '';
+
+            // Главная
+            const homeItem = document.createElement('span');
+            homeItem.className = 'breadcrumb-item';
+            homeItem.textContent = '🏠 Главная';
+            homeItem.onclick = showSections;
+            breadcrumb.appendChild(homeItem);
+
+            // Путь
+            navigationPath.forEach((item, index) => {
+                const separator = document.createElement('span');
+                separator.className = 'breadcrumb-separator';
+                separator.textContent = '›';
+                breadcrumb.appendChild(separator);
+
+                const breadcrumbItem = document.createElement('span');
+                breadcrumbItem.className = 'breadcrumb-item';
+                breadcrumbItem.textContent = item;
+                breadcrumbItem.onclick = () => navigateToLevel(index);
+                breadcrumb.appendChild(breadcrumbItem);
+            });
+        }
+
+        // Навигация по уровням
+        function navigateToLevel(level) {
+            if (level === 0) {
+                showCategories(navigationPath[0]);
+            } else if (level === 1) {
+                showModels(navigationPath[0], navigationPath[1]);
+            } else if (level === 2) {
+                showSubmodels(navigationPath[0], navigationPath[1], navigationPath[2]);
+            }
+        }
+
+        // Подсчет товаров
+        function countItems(obj) {
+            if (Array.isArray(obj)) {
+                return obj.length;
+            }
+            let count = 0;
+            for (const key in obj) {
+                count += countItems(obj[key]);
+            }
+            return count;
+        }
+
+        // Возврат назад
+        function goBack() {
+            if (navigationPath.length === 0) {
+                // Возврат к карте - currentCity уже сохранён в localStorage
+                window.location.href = 'index2.html';
+            } else if (navigationPath.length === 1) {
+                showSections();
+            } else if (navigationPath.length === 2) {
+                showCategories(navigationPath[0]);
+            } else if (navigationPath.length === 3) {
+                // Возврат из товаров к моделям
+                showModels(navigationPath[0], navigationPath[1]);
+            } else if (navigationPath.length === 4) {
+                // Возврат из товаров к подмоделям
+                showSubmodels(navigationPath[0], navigationPath[1], navigationPath[2]);
+            }
+        }
+
+        // Закрытие модального окна по клику вне контента
+        document.getElementById('product-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'product-modal') {
+                closeModal();
+            }
+        });
+
+        // Инициализация
+        loadData();
+    </script>
+</body>
+</html>

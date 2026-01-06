@@ -1,0 +1,21 @@
+{
+  "options": {
+    "paths": {
+      "root": "",
+      "fonts": "fonts",
+      "sprites": "sprites",
+      "styles": "styles",
+      "mbtiles": ""
+    },
+    "serveAllFonts": true
+  },
+  "styles": {
+    "neon-roads": {
+      "style": "styles/neon-roads.json",
+      "tilejson": {
+        "type": "overlay"
+      }
+    }
+  },
+  "data": {}
+}

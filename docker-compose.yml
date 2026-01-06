@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  tileserver:
+    image: maptiler/tileserver-gl
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./map-data:/data
+    environment:
+      - VERBOSE=true
+    command: --config /data/config.json
+
+  # Опционально: сервер для скачивания OSM данных
+  # osm-data:
+  #   image: overv/openstreetmap-tile-server
+  #   ports:
+  #     - "8081:80"
+  #   volumes:
+  #     - osm-data:/var/lib/postgresql/12/main
+  #     - osm-tiles:/var/lib/mod_tile
+
+# volumes:
+#   osm-data:
+#   osm-tiles:
