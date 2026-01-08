@@ -1,34 +1,31 @@
 import { useEffect, useState, useRef } from 'preact/hooks';
 import { MapView } from './components/MapView';
-import { SimpleCitySelector } from './components/SimpleCitySelector';
-import { ActivationRitual } from './components/ActivationRitual';
+import { LoadingScreen } from './components/LoadingScreen';
 import { ShopInfo } from './components/ShopInfo';
 import { useMapStore } from './store/mapStore';
 import { api, updateCitiesWithoutShops } from './api/client';
 import type { Shop, City } from './types';
 import { showBackButton, hideBackButton, hapticFeedback } from './utils/telegram';
 
-type AppScreen = 'activation' | 'city-select' | 'map';
-
 export function App() {
-  const { setCities, selectedCity, setShops } = useMapStore();
+  const { setCities, setShops, setSelectedCity } = useMapStore();
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('activation');
+  const [isLoading, setIsLoading] = useState(true);
   const mapResetRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    // Загрузка городов И всех магазинов сразу
+    // Загрузка данных параллельно с показом экрана загрузки (3 сек)
     Promise.all([
       api.getCities(),
-      api.getAllShops()
+      api.getAllShops(),
+      new Promise(resolve => setTimeout(resolve, 3000)) // Минимум 3 секунды загрузки
     ]).then(([citiesData, allShops]) => {
       // Добавляем активность к магазинам
       const shopsWithActivity = allShops.map((shop: any) => ({
         ...shop,
-        activity: Math.random() * 0.5 + 0.5, // 0.5-1.0
+        activity: Math.random() * 0.5 + 0.5,
       }));
       setShops(shopsWithActivity);
-      console.log(`📦 Загружено магазинов из единой таблицы: ${shopsWithActivity.length}`);
       
       // Подсчитываем количество магазинов для каждого города
       const shopsByCity = shopsWithActivity.reduce((acc: Record<string, number>, shop: Shop) => {
@@ -43,17 +40,18 @@ export function App() {
         shops: shopsByCity[city.name] || 0
       }));
       
-      const citiesWithShops = citiesWithShopCounts.filter((c: City) => typeof c.shops === 'number' && c.shops > 0);
-      const citiesWithoutShops = citiesWithShopCounts.filter((c: City) => typeof c.shops === 'number' && c.shops === 0);
-      
-      // ВАЖНО: Обновляем глобальный массив CITIES_WITHOUT_SHOPS_VISUAL
       updateCitiesWithoutShops(citiesWithShopCounts);
-      
-      console.log(`🔍 Города БЕЗ магазинов (белые):`, citiesWithoutShops.map((c: City) => c.name));
-      console.log(`🟠 Города С магазинами (оранжевые):`, citiesWithShops.map((c: City) => c.name));
-      
       setCities(citiesWithShopCounts);
-      console.log(`📦 App.tsx: Загружено всего магазинов: ${shopsWithActivity.length}`);
+      
+      // Автоматически выбираем первый город с магазинами
+      const firstCityWithShops = citiesWithShopCounts.find((c: City) => c.shops > 0);
+      if (firstCityWithShops) {
+        setSelectedCity(firstCityWithShops);
+      }
+      
+      // Скрываем загрузку
+      setIsLoading(false);
+      console.log(`📦 Загружено: ${shopsWithActivity.length} магазинов`);
     });
     
     // Настройка кнопки "Назад" в Telegram
@@ -61,10 +59,6 @@ export function App() {
       hapticFeedback('light');
       if (selectedShop) {
         setSelectedShop(null);
-      } else if (currentScreen === 'map') {
-        setCurrentScreen('city-select');
-      } else if (currentScreen === 'city-select') {
-        setCurrentScreen('activation');
       }
     };
     
@@ -73,30 +67,22 @@ export function App() {
     return () => {
       hideBackButton(handleBack);
     };
-  }, [currentScreen, selectedShop, selectedCity]);
+  }, [selectedShop]);
 
 
 
   // Сброс карты при закрытии каталога
   useEffect(() => {
-    if (!selectedShop && mapResetRef.current && currentScreen === 'map') {
+    if (!selectedShop && mapResetRef.current && !isLoading) {
       mapResetRef.current();
     }
-  }, [selectedShop, currentScreen]);
-
-  const handleActivation = () => {
-    setCurrentScreen('city-select');
-  };
-
-  const handleCitySelected = () => {
-    setCurrentScreen('map');
-  };
+  }, [selectedShop, isLoading]);
 
   return (
     <div className="app">
-      {currentScreen === 'activation' && <ActivationRitual onActivate={handleActivation} />}
-      {currentScreen === 'city-select' && <SimpleCitySelector onCitySelected={handleCitySelected} />}
-      {currentScreen === 'map' && selectedCity && (
+      {isLoading ? (
+        <LoadingScreen />
+      ) : (
         <MapView 
           onShopClick={setSelectedShop} 
           onResetMap={(fn) => { mapResetRef.current = fn; }}
