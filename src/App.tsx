@@ -8,7 +8,7 @@ import type { Shop, City } from './types';
 import { showBackButton, hideBackButton, hapticFeedback } from './utils/telegram';
 
 export function App() {
-  const { setCities, setShops, setSelectedCity } = useMapStore();
+  const { setCities, setShops } = useMapStore();
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const mapResetRef = useRef<(() => void) | null>(null);
