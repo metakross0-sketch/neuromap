@@ -101,6 +101,7 @@ canvas {
   justify-content: space-between;
   transition: all 0.3s ease;
   font-family: inherit;
+  will-change: transform, background, box-shadow;
 }
 
 .city-button:hover,
@@ -108,7 +109,7 @@ canvas {
   background: rgba(240, 248, 255, 0.2);
   border-color: #f0f8ff;
   box-shadow: 0 0 20px rgba(240, 248, 255, 0.3);
-  transform: translateX(5px);
+  transform: translate3d(5px, 0, 0); /* GPU-ускорение */
 }
 
 .city-button__name {
@@ -157,11 +158,12 @@ canvas {
   animation: slideUp 0.3s ease;
   box-shadow: 0 -5px 40px rgba(240, 248, 255, 0.3);
   overflow-y: auto;
+  will-change: transform;
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 .shop-info__close {
@@ -180,11 +182,12 @@ canvas {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  will-change: transform, background;
 }
 
 .shop-info__close:hover {
   background: rgba(240, 248, 255, 0.2);
-  transform: rotate(90deg);
+  transform: rotate3d(0, 0, 1, 90deg); /* GPU-ускорение */
 }
 
 .shop-info__header {
@@ -287,13 +290,14 @@ canvas {
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
+  will-change: transform, background, box-shadow;
 }
 
 .shop-info__catalog:hover,
 .shop-info__catalog:active {
   background: rgba(240, 248, 255, 0.2);
   box-shadow: 0 0 20px rgba(240, 248, 255, 0.4);
-  transform: translateY(-2px);
+  transform: translate3d(0, -2px, 0); /* GPU-ускорение */
 }
 
 /* Catalog Section */

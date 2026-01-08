@@ -18,13 +18,13 @@ export function ActivationRitual({ onActivate }: ActivationRitualProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }); // Оптимизация: отключаем альфа-канал
     if (!ctx) return;
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Генерация квадратиков-пикселей для эффекта "пазла"
+    // Генерация квадратиков-пикселей для эффекта "пазла" (КЭШИРУЕМ результат)
     const pixelSize = 20;
     const pixels: { x: number; y: number; delay: number }[] = [];
     
@@ -39,56 +39,84 @@ export function ActivationRitual({ onActivate }: ActivationRitualProps) {
     }
 
     let startTime = Date.now();
+    let lastFrame = 0;
+    const fps = 60;
+    const frameInterval = 1000 / fps;
+    let animationId: number;
 
-    const animate = () => {
+    const animate = (timestamp: number) => {
+      // Ограничение FPS для экономии ресурсов
+      const elapsed = timestamp - lastFrame;
+      if (elapsed < frameInterval) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrame = timestamp;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const elapsed = Date.now() - startTime;
+      const elapsedTime = Date.now() - startTime;
 
       if (!isActivating) {
         // Анимация появления - квадратики исчезают, открывая контент
-        pixels.forEach(pixel => {
-          if (elapsed < pixel.delay) {
+        let visibleCount = 0;
+        for (let i = 0; i < pixels.length; i++) {
+          const pixel = pixels[i];
+          if (elapsedTime < pixel.delay) {
             // Квадратик еще не исчез - рисуем его
             ctx.fillStyle = '#0a0a1a';
             ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+            visibleCount++;
           }
-          // Если elapsed >= pixel.delay, квадратик исчез - не рисуем
-        });
+        }
 
-        if (elapsed > 1000 && !showPrompt) {
+        // Останавливаем анимацию когда все пиксели исчезли
+        if (visibleCount === 0 && elapsedTime > 800) {
+          if (!showPrompt) setShowPrompt(true);
+          return; // Прекращаем анимацию
+        }
+
+        if (elapsedTime > 1000 && !showPrompt) {
           setShowPrompt(true);
         }
       } else {
         // Анимация закрытия - квадратики появляются, закрывая контент
-        pixels.forEach(pixel => {
-          if (elapsed > pixel.delay) {
+        for (let i = 0; i < pixels.length; i++) {
+          const pixel = pixels[i];
+          if (elapsedTime > pixel.delay) {
             // Квадратик уже появился - рисуем его
             ctx.fillStyle = '#0a0a1a';
             ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
           }
-        });
+        }
 
-        if (elapsed > 400) {
+        if (elapsedTime > 400) {
           onActivateRef.current();
           return;
         }
       }
 
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
 
-    animate();
+    animationId = requestAnimationFrame(animate);
 
+    let resizeTimeout: number;
     const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      // Debounce resize для производительности
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }, 150);
     };
 
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationId);
+      clearTimeout(resizeTimeout);
     };
   }, [isActivating]);
 

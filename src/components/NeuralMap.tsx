@@ -28,7 +28,7 @@ export function NeuralMap({ onShopClick, activationWave = false }: NeuralMapProp
     const canvas = canvasRef.current;
     if (!canvas || !selectedCity) return;
 
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: false })!; // Отключаем альфа-канал для производительности
     const dpr = window.devicePixelRatio || 1;
     
     const resize = () => {
@@ -40,10 +40,20 @@ export function NeuralMap({ onShopClick, activationWave = false }: NeuralMapProp
     };
     
     resize();
-    window.addEventListener('resize', resize);
+    
+    let resizeTimeout: number;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = window.setTimeout(resize, 150);
+    };
+    
+    window.addEventListener('resize', debouncedResize);
 
     let animationId: number;
     let time = 0;
+    let lastFrame = 0;
+    const fps = 30; // Ограничиваем FPS для экономии ресурсов
+    const frameInterval = 1000 / fps;
 
     // Преобразование координат
     const latLngToScreen = (lat: number, lng: number) => {
@@ -117,7 +127,15 @@ export function NeuralMap({ onShopClick, activationWave = false }: NeuralMapProp
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('click', handleClick);
 
-    const render = () => {
+    const render = (timestamp: number = 0) => {
+      // Ограничение FPS
+      const elapsed = timestamp - lastFrame;
+      if (elapsed < frameInterval) {
+        animationId = requestAnimationFrame(render);
+        return;
+      }
+      lastFrame = timestamp;
+
       const w = canvas.width / dpr;
       const h = canvas.height / dpr;
 
@@ -125,22 +143,20 @@ export function NeuralMap({ onShopClick, activationWave = false }: NeuralMapProp
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, w, h);
 
-      // Фоновая сетка (космический эффект)
+      // Фоновая сетка (оптимизирована - рисуем одним строком)
       ctx.strokeStyle = 'rgba(240, 248, 255, 0.03)';
       ctx.lineWidth = 0.5;
       const gridSize = 50;
+      ctx.beginPath();
       for (let x = 0; x < w; x += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, h);
-        ctx.stroke();
       }
       for (let y = 0; y < h; y += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(w, y);
-        ctx.stroke();
       }
+      ctx.stroke();
 
       if (shops.length === 0) {
         ctx.fillStyle = '#0ff';
@@ -254,7 +270,8 @@ export function NeuralMap({ onShopClick, activationWave = false }: NeuralMapProp
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', resize);
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', debouncedResize);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
