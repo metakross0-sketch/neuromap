@@ -97,7 +97,90 @@ export function LoadingScreen() {
       justifyContent: 'center',
       zIndex: 1000
     }}>
-      {/* Логотип с дорогами расходящимися к краям */}
+      {/* Паутина дорог на весь экран */}
+      <svg 
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 100,
+          pointerEvents: 'none'
+        }}
+      >
+        <defs>
+          <style>
+            {`
+              .road-line {
+                stroke: #ffffff;
+                stroke-width: 2;
+                stroke-dasharray: 1000;
+                stroke-dashoffset: 1000;
+                animation: drawRoad 2s ease-out forwards;
+                opacity: 0.6;
+              }
+              
+              @keyframes drawRoad {
+                to {
+                  stroke-dashoffset: 0;
+                }
+              }
+            `}
+          </style>
+        </defs>
+        
+        {/* Основные линии от центра к краям */}
+        <line x1="50%" y1="50%" x2="0%" y2="50%" className="road-line" style={{ animationDelay: '0s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="50%" className="road-line" style={{ animationDelay: '0.1s' }} />
+        <line x1="50%" y1="50%" x2="50%" y2="0%" className="road-line" style={{ animationDelay: '0.2s' }} />
+        <line x1="50%" y1="50%" x2="50%" y2="100%" className="road-line" style={{ animationDelay: '0.3s' }} />
+        
+        {/* Диагональные линии */}
+        <line x1="50%" y1="50%" x2="0%" y2="0%" className="road-line" style={{ animationDelay: '0.4s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="0%" className="road-line" style={{ animationDelay: '0.5s' }} />
+        <line x1="50%" y1="50%" x2="0%" y2="100%" className="road-line" style={{ animationDelay: '0.6s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="100%" className="road-line" style={{ animationDelay: '0.7s' }} />
+        
+        {/* Дополнительные линии для паутины - верхняя половина */}
+        <line x1="50%" y1="50%" x2="25%" y2="0%" className="road-line" style={{ animationDelay: '0.8s' }} />
+        <line x1="50%" y1="50%" x2="75%" y2="0%" className="road-line" style={{ animationDelay: '0.9s' }} />
+        
+        {/* Дополнительные линии - правая половина */}
+        <line x1="50%" y1="50%" x2="100%" y2="25%" className="road-line" style={{ animationDelay: '1s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="75%" className="road-line" style={{ animationDelay: '1.1s' }} />
+        
+        {/* Дополнительные линии - нижняя половина */}
+        <line x1="50%" y1="50%" x2="25%" y2="100%" className="road-line" style={{ animationDelay: '1.2s' }} />
+        <line x1="50%" y1="50%" x2="75%" y2="100%" className="road-line" style={{ animationDelay: '1.3s' }} />
+        
+        {/* Дополнительные линии - левая половина */}
+        <line x1="50%" y1="50%" x2="0%" y2="25%" className="road-line" style={{ animationDelay: '1.4s' }} />
+        <line x1="50%" y1="50%" x2="0%" y2="75%" className="road-line" style={{ animationDelay: '1.5s' }} />
+        
+        {/* Промежуточные линии для более плотной паутины */}
+        <line x1="50%" y1="50%" x2="12.5%" y2="0%" className="road-line" style={{ animationDelay: '1.6s' }} />
+        <line x1="50%" y1="50%" x2="37.5%" y2="0%" className="road-line" style={{ animationDelay: '1.7s' }} />
+        <line x1="50%" y1="50%" x2="62.5%" y2="0%" className="road-line" style={{ animationDelay: '1.8s' }} />
+        <line x1="50%" y1="50%" x2="87.5%" y2="0%" className="road-line" style={{ animationDelay: '1.9s' }} />
+        
+        <line x1="50%" y1="50%" x2="100%" y2="12.5%" className="road-line" style={{ animationDelay: '2s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="37.5%" className="road-line" style={{ animationDelay: '2.1s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="62.5%" className="road-line" style={{ animationDelay: '2.2s' }} />
+        <line x1="50%" y1="50%" x2="100%" y2="87.5%" className="road-line" style={{ animationDelay: '2.3s' }} />
+        
+        <line x1="50%" y1="50%" x2="12.5%" y2="100%" className="road-line" style={{ animationDelay: '2.4s' }} />
+        <line x1="50%" y1="50%" x2="37.5%" y2="100%" className="road-line" style={{ animationDelay: '2.5s' }} />
+        <line x1="50%" y1="50%" x2="62.5%" y2="100%" className="road-line" style={{ animationDelay: '2.6s' }} />
+        <line x1="50%" y1="50%" x2="87.5%" y2="100%" className="road-line" style={{ animationDelay: '2.7s' }} />
+        
+        <line x1="50%" y1="50%" x2="0%" y2="12.5%" className="road-line" style={{ animationDelay: '2.8s' }} />
+        <line x1="50%" y1="50%" x2="0%" y2="37.5%" className="road-line" style={{ animationDelay: '2.9s' }} />
+        <line x1="50%" y1="50%" x2="0%" y2="62.5%" className="road-line" style={{ animationDelay: '3s' }} />
+        <line x1="50%" y1="50%" x2="0%" y2="87.5%" className="road-line" style={{ animationDelay: '3.1s' }} />
+      </svg>
+      
+      {/* Логотип */}
       <div style={{
         position: 'relative',
         zIndex: 101,
@@ -105,166 +188,6 @@ export function LoadingScreen() {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        {/* Геометрические дороги от логотипа к краям экрана */}
-        <div style={{
-          position: 'absolute',
-          width: '100vw',
-          height: '100vh',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none'
-        }}>
-          {/* Горизонтальная дорога влево */}
-          {Array.from({ length: 20 }, (_, i) => (
-            <div
-              key={`left-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: '50%',
-                left: `calc(50% - ${(i + 1) * 30}px)`,
-                transform: 'translateY(-50%)',
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Горизонтальная дорога вправо */}
-          {Array.from({ length: 20 }, (_, i) => (
-            <div
-              key={`right-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: '50%',
-                left: `calc(50% + ${(i + 1) * 30}px)`,
-                transform: 'translateY(-50%)',
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Вертикальная дорога вверх */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`top-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% - ${(i + 1) * 30}px)`,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Вертикальная дорога вниз */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`bottom-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% + ${(i + 1) * 30}px)`,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Диагональная дорога: верх-лево */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`tl-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% - ${(i + 1) * 21}px)`,
-                left: `calc(50% - ${(i + 1) * 21}px)`,
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Диагональная дорога: верх-право */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`tr-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% - ${(i + 1) * 21}px)`,
-                left: `calc(50% + ${(i + 1) * 21}px)`,
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Диагональная дорога: низ-лево */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`bl-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% + ${(i + 1) * 21}px)`,
-                left: `calc(50% - ${(i + 1) * 21}px)`,
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-          
-          {/* Диагональная дорога: низ-право */}
-          {Array.from({ length: 15 }, (_, i) => (
-            <div
-              key={`br-${i}`}
-              style={{
-                position: 'absolute',
-                width: '12px',
-                height: '12px',
-                backgroundColor: '#ffffff',
-                borderRadius: '2px',
-                top: `calc(50% + ${(i + 1) * 21}px)`,
-                left: `calc(50% + ${(i + 1) * 21}px)`,
-                animation: 'loadSquare 2s infinite',
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-        </div>
-        
-        {/* Логотип */}
         <img 
           src="/neuromap/logo.png" 
           alt="NeuroMap"
@@ -273,9 +196,7 @@ export function LoadingScreen() {
             height: 'auto',
             objectFit: 'contain',
             filter: 'drop-shadow(0 0 30px rgba(240, 248, 255, 0.5))',
-            animation: 'pulse 2s infinite',
-            position: 'relative',
-            zIndex: 1
+            animation: 'pulse 2s infinite'
           }}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
