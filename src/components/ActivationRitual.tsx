@@ -148,7 +148,7 @@ export function ActivationRitual({ onActivate }: ActivationRitualProps) {
         transform: 'translate(-50%, -50%)',
         width: '200px',
         height: '300px',
-        zIndex: 1
+        zIndex: 101
       }}>
         <svg viewBox="0 0 200 300" style={{ width: '100%', height: '100%' }}>
           {/* Упрощенный паттерн отпечатка пальца */}
@@ -179,7 +179,7 @@ export function ActivationRitual({ onActivate }: ActivationRitualProps) {
           textAlign: 'center',
           animation: 'pulse 2s infinite',
           textShadow: '0 0 20px rgba(255, 140, 0, 0.5)',
-          zIndex: 1
+          zIndex: 101
         }}>
           Нажмите для активации
         </div>
