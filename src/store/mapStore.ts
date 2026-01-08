@@ -9,6 +9,7 @@ interface MapState {
   
   setCities: (cities: City[]) => void;
   selectCity: (city: City) => void;
+  setSelectedCity: (city: City | null) => void;
   setShops: (shops: Shop[]) => void;
   triggerPulse: (shop: Shop) => void;
 }
@@ -20,7 +21,8 @@ export const useMapStore = create<MapState>((set) => ({
   pulseOrigin: null,
   
   setCities: (cities) => set({ cities }),
-  selectCity: (city) => set({ selectedCity: city, shops: [] }),
+  selectCity: (city) => set({ selectedCity: city }),
+  setSelectedCity: (city) => set({ selectedCity: city }),
   setShops: (shops) => set({ shops }),
   triggerPulse: (shop) => {
     set({ pulseOrigin: shop });

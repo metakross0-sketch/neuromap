@@ -44,7 +44,7 @@ export function App() {
       setCities(citiesWithShopCounts);
       
       // Автоматически выбираем первый город с магазинами
-      const firstCityWithShops = citiesWithShopCounts.find((c: City) => c.shops > 0);
+      const firstCityWithShops = citiesWithShopCounts.find((c: City) => typeof c.shops === 'number' && c.shops > 0);
       if (firstCityWithShops) {
         setSelectedCity(firstCityWithShops);
       }
