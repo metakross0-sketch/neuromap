@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useState } from 'preact/hooks';
+﻿import { useRef, useEffect, useState, useMemo } from 'preact/hooks';
 import { useMapStore } from '../store/mapStore';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -10,11 +10,9 @@ import { CITIES_WITHOUT_SHOPS_VISUAL, CITY_COORDS } from '../api/client';
 interface MapViewProps {
   onShopClick?: (shop: Shop) => void;
   onResetMap?: (resetFn: () => void) => void;
-  selectedCategory?: string | null;
-  onCategoryChange?: (category: string | null) => void;
 }
 
-export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryChange }: MapViewProps) {
+export function MapView({ onShopClick, onResetMap }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const pixelOverlayRef = useRef<HTMLCanvasElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -24,7 +22,6 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
   const shopPulseAnimationId = useRef<number | null>(null);
   const { shops, selectedCity, cities } = useMapStore();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
   const [clusterShops, setClusterShops] = useState<Shop[] | null>(null);
   const [showCityLabels, setShowCityLabels] = useState<boolean>(false);
   const [showCitySelector, setShowCitySelector] = useState<boolean>(false);
@@ -36,11 +33,17 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [echoWave, setEchoWave] = useState<{ x: number; y: number; radius: number; angle: number; opacity?: number } | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(5);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const selectedCategoryRef = useRef<string | null>(null);
 
   // Синхронизируем ref с state
   useEffect(() => {
     userLocationRef.current = userLocation;
   }, [userLocation]);
+
+  useEffect(() => {
+    selectedCategoryRef.current = selectedCategory;
+  }, [selectedCategory]);
 
   // Передаем функцию resetRoute родительскому компоненту
   useEffect(() => {
@@ -693,40 +696,68 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         }
       });
 
-      // Слой 1: Внешнее свечение
+      // Слой 1: Внешнее оранжевое свечение (как у motorway в городе)
       map.current.addLayer({
         id: 'inter-city-roads-glow',
         type: 'line',
         source: 'inter-city-roads',
         paint: {
           'line-color': '#cc5500',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 6, 6, 12],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 3, 8, 12, 12, 21],
           'line-blur': 15,
-          'line-opacity': 0.4
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1.0, 8, 1.0]
         },
-        minzoom: 3,
-        maxzoom: 8
+        minzoom: 4,
+        maxzoom: 12
       });
 
-      // Слой 2: Основная пульсирующая линия
+      // Слой 2: Оранжевая база
       map.current.addLayer({
-        id: 'inter-city-roads-main',
+        id: 'inter-city-roads-base',
         type: 'line',
         source: 'inter-city-roads',
         paint: {
           'line-color': '#cc6600',
-          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 3, 6, 6],
-          'line-opacity': 0.9
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.5, 8, 6, 12, 10.5],
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1.0, 8, 1.0]
         },
-        minzoom: 3,
-        maxzoom: 8
+        minzoom: 4,
+        maxzoom: 12
       });
 
-      // Запускаем пульсацию
-      let opacity = 0.5;
+      // Слой 3: Черная внутренняя линия (создает зазор между оранжевым и белым)
+      map.current.addLayer({
+        id: 'inter-city-roads-inner',
+        type: 'line',
+        source: 'inter-city-roads',
+        paint: {
+          'line-color': '#1a1a1a',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.2, 8, 5.3, 12, 9],
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 1.0, 8, 1.0]
+        },
+        minzoom: 4,
+        maxzoom: 12
+      });
+
+      // Слой 4: Белая центральная вена
+      map.current.addLayer({
+        id: 'inter-city-roads-vein',
+        type: 'line',
+        source: 'inter-city-roads',
+        paint: {
+          'line-color': '#f0f8ff',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.0525, 8, 0.175, 12, 0.28],
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 8, 0.7]
+        },
+        minzoom: 4,
+        maxzoom: 12
+      });
+
+      // Запускаем пульсацию белой вены
+      let opacity = 0.6;
       let increasing = true;
       const intervalId = window.setInterval(() => {
-        if (!map.current?.getLayer('inter-city-roads-main')) {
+        if (!map.current?.getLayer('inter-city-roads-vein')) {
           clearInterval(intervalId);
           return;
         }
@@ -739,14 +770,14 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
           }
         } else {
           opacity -= 0.05;
-          if (opacity <= 0.5) {
-            opacity = 0.5;
+          if (opacity <= 0.6) {
+            opacity = 0.6;
             increasing = true;
           }
         }
 
         try {
-          map.current?.setPaintProperty('inter-city-roads-main', 'line-opacity', opacity);
+          map.current?.setPaintProperty('inter-city-roads-vein', 'line-opacity', opacity);
         } catch (e) {
           clearInterval(intervalId);
         }
@@ -864,11 +895,12 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
       const response = await fetch('/neuromap/roads/russia-cities/inter-city-roads.geojson');
       
       if (!response.ok) {
-        console.warn('⚠️ Файл межгородских дорог не найден');
+        console.warn(`⚠️ Файл межгородских дорог не найден: ${response.status}`);
         return;
       }
 
       const geojson = await response.json();
+      console.log(`📦 GeoJSON загружен: ${geojson.features?.length || 0} features`);
       
       // Фильтруем только те маршруты, где ОБА города без магазинов
       const filteredFeatures = geojson.features.filter((feature: any) => {
@@ -878,7 +910,8 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
                CITIES_WITHOUT_SHOPS_VISUAL.includes(to);
       });
 
-      console.log(`✅ Загружено ${filteredFeatures.length} маршрутов из ${geojson.features.length}`);
+      console.log(`✅ Отфильтровано ${filteredFeatures.length} маршрутов из ${geojson.features.length}`);
+      console.log(`🎨 Примеры маршрутов:`, filteredFeatures.slice(0, 3).map((f: any) => `${f.properties.from} → ${f.properties.to}`));
 
       // Добавляем source для межгородских дорог
       const source = map.current.getSource('no-shops-inter-city-roads');
@@ -887,13 +920,20 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
           type: 'FeatureCollection',
           features: filteredFeatures
         });
+        console.log(`✅ Данные установлены в source 'no-shops-inter-city-roads'`);
       
         // Показываем слои на zoom 4-11.5
         const currentZoom = map.current.getZoom();
+        console.log(`🔍 Текущий zoom: ${currentZoom.toFixed(1)}`);
         if (currentZoom >= 4 && currentZoom < 11.5) {
           map.current.setLayoutProperty('no-shops-inter-city-roads-glow', 'visibility', 'visible');
           map.current.setLayoutProperty('no-shops-inter-city-roads', 'visibility', 'visible');
+          console.log(`👁️ Белые дороги ПОКАЗАНЫ (zoom ${currentZoom.toFixed(1)} в диапазоне 4-11.5)`);
+        } else {
+          console.log(`🙈 Белые дороги СКРЫТЫ (zoom ${currentZoom.toFixed(1)} вне диапазона 4-11.5)`);
         }
+      } else {
+        console.error('❌ Source "no-shops-inter-city-roads" не найден!');
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки межгородских дорог:', error);
@@ -1653,6 +1693,7 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     setPopupShop(null);
     setPopupPosition(null);
     setEchoWave(null);
+    setSelectedCategory(null); // Сбрасываем выбранную категорию
 
     // Показываем все магазины города на карте
     if (shops.length > 0) {
@@ -1696,17 +1737,17 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
   }, []);
 
   useEffect(() => {
-    if (!mapContainer.current || !selectedCity) return;
+    if (!mapContainer.current) return;
     
-    // Если карта уже существует - просто перемещаем и загружаем дороги
-    if (map.current) {
+    // Если карта уже существует и город выбран - перемещаем к городу
+    if (map.current && selectedCity) {
       console.log(`🗺️ Карта уже существует, перемещаем в ${selectedCity.name}`);
       
       // Устанавливаем флаг перед программным переходом
       skipAutoLoadRef.current = true;
       
-      // Определяем zoom в зависимости от наличия магазинов
-      const targetZoom = (typeof selectedCity.shops === 'number' && selectedCity.shops > 0) ? 12 : 11;
+      // Всегда используем zoom 12 при выборе города
+      const targetZoom = 12;
       
       // Сначала летим к городу
       map.current.flyTo({
@@ -1722,23 +1763,45 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
       return;
     }
 
+    // Если карта уже создана, но город не выбран - возвращаемся к общему виду
+    if (map.current && !selectedCity) {
+      console.log('🗺️ Возврат к общему виду России');
+      map.current.flyTo({
+        center: [65, 65], // Центр России
+        zoom: 4,
+        duration: 1500
+      });
+      return;
+    }
+
+    // Инициализация карты первый раз
+    if (map.current) return; // Карта уже создана
+
     // Скрываем карту до начала анимации
     if (mapContainer.current) {
       mapContainer.current.style.opacity = '0';
     }
 
-    // Определяем zoom в зависимости от типа города
-    const isCityWithoutShops = CITIES_WITHOUT_SHOPS_VISUAL.includes(selectedCity.name);
-    const initialZoom = isCityWithoutShops ? 11 : 12;
+    // Если город выбран - используем его координаты, иначе - центр России
+    const initialCenter: [number, number] = selectedCity 
+      ? [selectedCity.lng, selectedCity.lat]
+      : [65, 65]; // Центр России
+    
+    const isCityWithoutShops = selectedCity ? CITIES_WITHOUT_SHOPS_VISUAL.includes(selectedCity.name) : false;
+    const initialZoom = selectedCity 
+      ? (isCityWithoutShops ? 11 : 12)
+      : 4; // Zoom 4 для общего вида
+
+    console.log(`🗺️ Инициализация карты: center=${initialCenter}, zoom=${initialZoom}, город=${selectedCity?.name || 'вся Россия'}`);
 
     // Инициализация карты с неоновыми оранжевыми дорогами (только первый раз)
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: neonRoadsStyle as any,
-      center: [selectedCity.lng, selectedCity.lat],
+      center: initialCenter,
       zoom: initialZoom,
       minZoom: 4, // Минимальный zoom - нельзя отдалить дальше
-      maxZoom: isCityWithoutShops ? 11.5 : 18, // Ограничение для городов без магазинов
+      maxZoom: selectedCity && isCityWithoutShops ? 11.5 : 18, // Ограничение для городов без магазинов
       attributionControl: false
     });
 
@@ -1846,7 +1909,8 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         
         if (nearestCity && nearestCity.name !== loadedCityName.current) {
           console.log(`🎯 Обнаружен новый город при перемещении карты: ${nearestCity.name}`);
-          // loadCityRoads сам обновит selectedCity в store и загрузит магазины
+          
+          // loadCityRoads сам обновит selectedCity в store
           loadCityRoads(nearestCity);
         }
       }
@@ -1868,10 +1932,19 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         clearTimeout(zoomDebounceTimer.current);
       }
       
-      // При zoom < 9 показываем city labels вместо маркеров магазинов (увеличено с 7 до 9)
-      if (zoom < 9) {
+      // При zoom < 9.6 город считается покинутым → сброс категории
+      if (zoom < 9.6) {
+        if (selectedCategoryRef.current) {
+          console.log('🔄 Зум < 9.6: сброс выбранной категории');
+          setSelectedCategory(null);
+        }
+      }
+      
+      // ПОСТОЯННАЯ ЗАВИСИМОСТЬ: zoom < 9.6 → city labels, zoom >= 9.6 → маркеры
+      if (zoom < 9.6) {
+        // Показываем названия городов
         setShowCityLabels(true);
-        // Скрываем маркеры магазинов
+        // Скрываем все маркеры магазинов/категорий
         markers.current.forEach(marker => {
           const el = marker.getElement();
           el.style.display = 'none';
@@ -1892,12 +1965,8 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
           renderRussiaCities();
         }
       } else {
+        // zoom >= 9.6: скрываем названия городов, маркеры станут видны через updateMarkersVisibility
         setShowCityLabels(false);
-        // Показываем маркеры магазинов
-        markers.current.forEach(marker => {
-          const el = marker.getElement();
-          el.style.display = 'block';
-        });
         
         // Скрываем крупные города России при приближении
         renderRussiaCities();
@@ -1909,10 +1978,12 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
           // Показываем белые неоновые дороги на zoom 4-11.5
           map.current.setLayoutProperty('no-shops-inter-city-roads-glow', 'visibility', 'visible');
           map.current.setLayoutProperty('no-shops-inter-city-roads', 'visibility', 'visible');
+          console.log(`👁️ handleZoom: Белые дороги ПОКАЗАНЫ (zoom ${zoom.toFixed(1)})`);
         } else {
           // Скрываем на других зумах
           map.current.setLayoutProperty('no-shops-inter-city-roads-glow', 'visibility', 'none');
           map.current.setLayoutProperty('no-shops-inter-city-roads', 'visibility', 'none');
+          console.log(`🙈 handleZoom: Белые дороги СКРЫТЫ (zoom ${zoom.toFixed(1)})`);
         }
       }
       
@@ -1951,6 +2022,43 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     };
   }, []); // Карта создаётся ТОЛЬКО ОДИН РАЗ при монтировании компонента
 
+  // АВТОМАТИЧЕСКОЕ ПРИБЛИЖЕНИЕ К ГОРОДУ ПРИ ПЕРВОМ ЗАПУСКЕ
+  const hasFlownToCity = useRef<boolean>(false);
+  
+  useEffect(() => {
+    // Ждем пока и карта, и город будут готовы
+    if (!map.current || !selectedCity) return;
+    
+    // Проверяем что карта полностью загружена
+    const mapInstance = map.current;
+    
+    const performInitialFly = () => {
+      if (hasFlownToCity.current) return;
+      
+      console.log(`🚀 Первое приближение к городу: ${selectedCity.name}`);
+      hasFlownToCity.current = true;
+      
+      // Летим к городу на зум 12
+      mapInstance.flyTo({
+        center: [selectedCity.lng, selectedCity.lat],
+        zoom: 12,
+        duration: 2000
+      });
+      
+      // Загружаем дороги города
+      skipAutoLoadRef.current = true;
+      pendingCityLoadRef.current = selectedCity;
+    };
+    
+    // Если карта уже загружена - летим сразу
+    if (mapInstance.loaded()) {
+      performInitialFly();
+    } else {
+      // Иначе ждем события load
+      mapInstance.once('load', performInitialFly);
+    }
+  }, [selectedCity]);
+
   // Отдельный эффект для реакции на изменение selectedCity
   useEffect(() => {
     if (!map.current || !selectedCity) return;
@@ -1977,6 +2085,23 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     }
   }, [selectedCity]);
 
+  // Сброс выбранной категории при смене города
+  useEffect(() => {
+    setSelectedCategory(null);
+  }, [selectedCity]);
+
+  // Загрузка дорог городов БЕЗ магазинов при обновлении списка cities
+  useEffect(() => {
+    if (!map.current || cities.length === 0) return;
+    
+    // Проверяем что CITIES_WITHOUT_SHOPS_VISUAL заполнен
+    if (CITIES_WITHOUT_SHOPS_VISUAL.length === 0) return;
+    
+    console.log('🔄 Обновлены города, перезагружаем дороги городов без магазинов');
+    loadCitiesWithoutShopsRoads();
+    createNoShopsInterCityRoads();
+  }, [cities]);
+
   // Создание city labels при zoom out
   useEffect(() => {
     if (!map.current || !showCityLabels) {
@@ -1994,7 +2119,7 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     // Функция для расчета масштаба от zoom (zoom 4 = 0.5x, zoom 9 = 1x)
     const getScale = (zoom: number) => {
       const minZoom = 4;
-      const maxZoom = 9;
+      const maxZoom = 9.6;
       const minScale = 0.5;
       const maxScale = 1;
       const t = Math.max(0, Math.min(1, (zoom - minZoom) / (maxZoom - minZoom)));
@@ -2005,9 +2130,13 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
       if (!map.current) return;
       const zoom = map.current.getZoom();
       const scale = getScale(zoom);
+      const visible = zoom < 9.6; // Названия городов видны только при zoom < 9.6
       
       cityLabelsRef.current.forEach(marker => {
         const el = marker.getElement();
+        if (el) {
+          el.style.display = visible ? 'block' : 'none';
+        }
         const innerEl = el?.querySelector('.city-label') as HTMLElement;
         if (innerEl) {
           innerEl.style.transform = `scale(${scale})`;
@@ -2054,36 +2183,42 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         innerEl.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.5)';
       });
       
-      el.addEventListener('click', () => {
-        // Переключаем на этот город и зумим к нему
-        if (map.current && selectedCity?.name !== city.name) {
-          console.log(`🏷️ Клик на city label: ${city.name}`);
-          
-          // Сбрасываем категорию при смене города
-          if (onCategoryChange) {
-            onCategoryChange(null);
-          }
-          
-          // Устанавливаем флаг перед программным переходом
-          skipAutoLoadRef.current = true;
-          
-          map.current.flyTo({
-            center: [city.lng, city.lat],
-            zoom: 12,
-            duration: 2000
-          });
-          
-          // Устанавливаем отложенную загрузку дорог ПОСЛЕ окончания анимации
-          pendingCityLoadRef.current = city;
-          console.log(`🏷️ Отложенная загрузка установлена для ${city.name}`);
-        } else if (selectedCity?.name === city.name) {
-          // Если уже в этом городе - просто зумим
-          map.current?.flyTo({
-            center: [city.lng, city.lat],
-            zoom: 12,
-            duration: 1500
-          });
-        }
+      const labelDiv = el.querySelector('.city-label') as HTMLElement;
+      
+      // Hover эффект только для тени, без transform
+      labelDiv.addEventListener('mouseenter', () => {
+        labelDiv.style.boxShadow = '0 0 40px rgba(255, 255, 255, 0.9)';
+      });
+      
+      labelDiv.addEventListener('mouseleave', () => {
+        labelDiv.style.boxShadow = '0 0 30px rgba(255, 255, 255, 0.5)';
+      });
+      
+      // Клик на город
+      labelDiv.addEventListener('click', () => {
+        if (!map.current) return;
+        
+        console.log(`🏷️ Клик на city label: ${city.name}`);
+        
+        // Обновляем selectedCity через store
+        const { selectCity } = useMapStore.getState();
+        selectCity(city);
+        
+        // Устанавливаем флаг перед программным переходом
+        skipAutoLoadRef.current = true;
+        
+        // Клик на город → зум 12 для показа категорий
+        const targetZoom = 12;
+        
+        map.current.flyTo({
+          center: [city.lng, city.lat],
+          zoom: targetZoom,
+          duration: 2000
+        });
+        
+        // Устанавливаем отложенную загрузку дорог ПОСЛЕ окончания анимации
+        pendingCityLoadRef.current = city;
+        console.log(`🏷️ Отложенная загрузка установлена для ${city.name}`);
       });
 
       const marker = new maplibregl.Marker({ 
@@ -2132,7 +2267,7 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     // Функция для расчета масштаба от zoom (zoom 4 = 0.5x, zoom 9 = 1x)
     const getScale = (zoom: number) => {
       const minZoom = 4;
-      const maxZoom = 9;
+      const maxZoom = 9.5;
       const minScale = 0.5;
       const maxScale = 1;
       const t = Math.max(0, Math.min(1, (zoom - minZoom) / (maxZoom - minZoom)));
@@ -2143,9 +2278,13 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
       if (!map.current) return;
       const zoom = map.current.getZoom();
       const scale = getScale(zoom);
+      const visible = zoom <= 9.5; // Названия городов видны только при zoom <= 9.5
       
       whiteCityLabelsRef.current.forEach(marker => {
         const el = marker.getElement();
+        if (el) {
+          el.style.display = visible ? 'block' : 'none';
+        }
         const innerEl = el?.querySelector('.city-label') as HTMLElement;
         if (innerEl) {
           innerEl.style.transform = `scale(${scale})`;
@@ -2286,34 +2425,53 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     };
   }, [isSelectingLocation, selectedShop, popupShop]);
 
-  // Загрузка категорий при выборе города
-  useEffect(() => {
-    if (!selectedCity) return;
+  // Фильтрация магазинов по городу - используем useMemo для оптимизации
+  const cityShops = useMemo(() => {
+    return selectedCity ? shops.filter(shop => shop.city === selectedCity.name) : [];
+  }, [selectedCity, shops]);
+  
+  // Вычисляем все уникальные категории в городе
+  const categoriesInCity = useMemo(() => {
+    const categories = new Set<string>();
+    cityShops.forEach(shop => {
+      categories.add(shop.category || 'Без категории');
+    });
+    return Array.from(categories);
+  }, [cityShops]);
+  
+  // Группировка по категориям или фильтрация по выбранной категории
+  const displayShops = useMemo(() => {
+    if (!selectedCity || cityShops.length === 0) return [];
     
-    // Извлекаем уникальные категории из магазинов
-    const uniqueCategories = Array.from(new Set(shops.map(shop => shop.category).filter(Boolean)));
-    setCategories(uniqueCategories.sort());
-  }, [shops, selectedCity]);
-
-  // Фильтрация магазинов по городу и категории
-  const cityShops = shops.filter(shop => shop.city === selectedCity?.name);
-  const filteredShops = selectedCategory 
-    ? cityShops.filter(shop => shop.category === selectedCategory)
-    : cityShops;
-
-  // Сбрасываем выбранный магазин если он не в текущей категории
-  useEffect(() => {
-    if (selectedShop && selectedCategory) {
-      const shopInCategory = filteredShops.find(s => s.id === selectedShop.id);
-      if (!shopInCategory) {
-        setSelectedShop(null);
-        resetRoute();
-      }
+    // При zoom < 9.6 НЕ показываем маркеры (только надписи городов)
+    if (currentZoom < 9.6) {
+      return [];
     }
-  }, [selectedCategory, filteredShops]);
+    
+    // Если категория НЕ выбрана - показываем первый магазин каждой категории (для выбора)
+    if (!selectedCategory) {
+      const categoryMap = new Map<string, Shop>();
+      cityShops.forEach(shop => {
+        const category = shop.category || 'Без категории';
+        if (!categoryMap.has(category)) {
+          categoryMap.set(category, shop);
+        }
+      });
+      return Array.from(categoryMap.values());
+    }
+    
+    // Если выбрана конкретная категория - показываем все магазины этой категории
+    return cityShops.filter(shop => shop.category === selectedCategory);
+  }, [selectedCity, cityShops, selectedCategory, currentZoom]);
+  
+  console.log(`🏪 Фильтрация: город=${selectedCity?.name}, всего=${shops.length}, в городе=${cityShops.length}, отображаем=${displayShops.length}, zoom=${currentZoom}, категория=${selectedCategory}`);
 
   useEffect(() => {
-    if (!map.current || filteredShops.length === 0) return;
+    if (!map.current || displayShops.length === 0) {
+      markers.current.forEach(marker => marker.remove());
+      markers.current = [];
+      return;
+    }
 
     // Удаление старых маркеров
     markers.current.forEach(marker => marker.remove());
@@ -2323,7 +2481,9 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     const clusters = new Map<string, Shop[]>();
     const clusterRadius = 0.0005; // ~50 метров
 
-    filteredShops.forEach(shop => {
+    console.log('🔍 ОТЛАДКА: displayShops для маркеров:', displayShops.map(s => ({ name: s.name, category: s.category, id: s.id })));
+
+    displayShops.forEach(shop => {
       let foundCluster = false;
       
       for (const [key, cluster] of clusters.entries()) {
@@ -2353,24 +2513,38 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         const el = document.createElement('div');
         el.className = 'map-marker';
         el.setAttribute('data-shop-id', shop.id.toString());
+        
+        // Динамический размер карточки на основе zoom
+        const zoom = map.current?.getZoom() || 13;
+        const scale = Math.min(1, Math.max(0.6, (zoom - 13) / 5)); // От 0.6 при zoom 13 до 1.0 при zoom 18
+        const fontSize = Math.floor(10 + scale * 2); // От 10px до 12px
+        const padding = Math.floor(3 + scale * 3); // От 3px до 6px
+        
+        // Определяем текст маркера: категория или название магазина
+        const isCategoryMode = !selectedCategory;
+        const markerText = isCategoryMode ? (shop.category || 'Без категории') : shop.name;
+        
         el.innerHTML = `
           <div style="
             position: absolute;
-            bottom: 25px;
+            bottom: 20px;
             left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
+            transform: translateX(-50%) scale(${scale});
+            background: rgba(0, 0, 0, 0.85);
             color: #f0f8ff;
-            padding: 4px 10px;
-            border-radius: 6px;
-            border: 1px solid white;
+            padding: ${padding}px ${padding * 2}px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
             white-space: nowrap;
-            font-size: 12px;
+            font-size: ${fontSize}px;
             font-weight: bold;
-            box-shadow: 0 0 15px rgba(240, 248, 255, 0.5);
+            box-shadow: 0 0 10px rgba(240, 248, 255, 0.4);
             pointer-events: none;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
           ">
-            ${shop.name}
+            ${markerText}
           </div>
           <div class="map-marker__glow"></div>
           <div class="map-marker__dot" style="background: rgba(240, 248, 255, ${shop.activity || 0.7}); box-shadow: 0 0 15px rgba(240, 248, 255, ${shop.activity || 0.7})"></div>
@@ -2379,6 +2553,14 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         
         el.addEventListener('click', async (e) => {
           e.stopPropagation();
+          
+          // Если это режим категорий - выбираем категорию вместо открытия магазина
+          if (isCategoryMode) {
+            const category = shop.category || 'Без категории';
+            console.log('📂 Выбрана категория:', category);
+            setSelectedCategory(category);
+            return;
+          }
           
           // Центрируем камеру на магазине
           if (map.current) {
@@ -2389,21 +2571,21 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
             });
           }
           
-          // Используем ref для получения актуального значения
-          const currentLocation = userLocationRef.current;
-          if (!currentLocation) {
-            alert('Сначала укажите ваше местоположение на карте');
-            return;
-          }
-          
-          // Сразу прокладываем маршрут с актуальным местоположением
-          setSelectedShop(shop);
-          await showRouteToShop(shop, currentLocation);
-          
-          // Показываем popup с карточкой магазина
+          // Показываем popup с карточкой магазина сразу
           const point = map.current!.project([shop.lng, shop.lat]);
           setPopupPosition({ x: point.x, y: point.y });
           setPopupShop(shop);
+          
+          // Используем ref для получения актуального значения
+          const currentLocation = userLocationRef.current;
+          if (!currentLocation) {
+            console.log('⚠️ Геолокация недоступна, пропускаем построение маршрута');
+            return;
+          }
+          
+          // Если есть геолокация - прокладываем маршрут
+          setSelectedShop(shop);
+          await showRouteToShop(shop, currentLocation);
         });
 
         const marker = new maplibregl.Marker({ 
@@ -2484,8 +2666,46 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
       }
     });
 
-    // НЕ изменяем масштаб карты автоматически - пользователь сам управляет камерой
-  }, [filteredShops, onShopClick]);
+    // Функция для обновления видимости маркеров на основе zoom
+    const updateMarkersVisibility = () => {
+      if (!map.current) return;
+      const zoom = map.current.getZoom();
+      // Маркеры категорий/магазинов видны только при zoom >= 9.6
+      const visible = zoom >= 9.6;
+      
+      markers.current.forEach(marker => {
+        const el = marker.getElement();
+        if (el) {
+          // Применяем видимость: показываем только если zoom > 9.5
+          el.style.display = visible ? 'block' : 'none';
+          
+          // Обновляем масштаб карточек
+          const scale = Math.min(1, Math.max(0.6, (zoom - 13) / 5));
+          const fontSize = Math.floor(10 + scale * 2);
+          const padding = Math.floor(3 + scale * 3);
+          
+          const label = el.querySelector('div[style*="position: absolute"]') as HTMLElement;
+          if (label) {
+            label.style.transform = `translateX(-50%) scale(${scale})`;
+            label.style.fontSize = `${fontSize}px`;
+            label.style.padding = `${padding}px ${padding * 2}px`;
+          }
+        }
+      });
+    };
+
+    // Начальная установка видимости
+    updateMarkersVisibility();
+
+    // Обновление при изменении zoom
+    map.current.on('zoom', updateMarkersVisibility);
+
+    return () => {
+      markers.current.forEach(marker => marker.remove());
+      markers.current = [];
+      map.current?.off('zoom', updateMarkersVisibility);
+    };
+  }, [displayShops, onShopClick, currentZoom, selectedCategory]);
 
   // Отдельный useEffect для применения затемнения при выборе магазина
   useEffect(() => {
@@ -2515,7 +2735,7 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
     }, 150); // Увеличил задержку до 150мс
     
     return () => clearTimeout(timer);
-  }, [selectedShop, filteredShops]);
+  }, [selectedShop, cityShops]);
 
   return (
     <>
@@ -2554,44 +2774,7 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         }}
       />
       
-      {/* Фильтр категорий */}
-      {categories.length > 0 && !selectedShop && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          zIndex: 1000
-        }}>
-          <select
-            value={selectedCategory || ''}
-            onChange={(e) => {
-              const target = e.target as HTMLSelectElement;
-              const value = target.value || null;
-              if (onCategoryChange) {
-                onCategoryChange(value);
-              }
-            }}
-            style={{
-              padding: '12px 16px',
-              background: 'rgba(10, 10, 26, 0.95)',
-              border: '2px solid rgba(204, 102, 0, 0.5)',
-              borderRadius: '8px',
-              color: '#ff8c00',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              cursor: 'pointer',
-              boxShadow: '0 0 20px rgba(204, 102, 0, 0.3)',
-              outline: 'none',
-              minWidth: '200px'
-            }}
-          >
-            <option value="">🏷️ Все категории</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      {/* Фильтр категорий УДАЛЕН - показываются все магазины города */}
       
       {/* Кнопка выбора местоположения вручную - всегда доступна */}
       {!selectedShop && !isSelectingLocation && (
@@ -2732,6 +2915,73 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
         >
           🏙️ {selectedCity.name}
         </button>
+      )}
+      
+      {/* Селектор категорий - показываем только когда выбрана категория и категорий больше 1 */}
+      {!selectedShop && !isSelectingLocation && selectedCategory && categoriesInCity.length > 1 && currentZoom >= 9.6 && (
+        <div style={{
+          position: 'absolute',
+          top: '150px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.85)',
+          border: '2px solid rgba(240, 248, 255, 0.8)',
+          borderRadius: '8px',
+          padding: '10px',
+          zIndex: 1000,
+          minWidth: '150px',
+          boxShadow: '0 0 20px rgba(240, 248, 255, 0.5)'
+        }}>
+          <div style={{
+            color: '#f0f8ff',
+            fontSize: '12px',
+            marginBottom: '8px',
+            opacity: 0.7
+          }}>
+            Категории
+          </div>
+          {categoriesInCity.map(category => (
+            <button
+              key={category}
+              onClick={() => {
+                console.log(`📋 Выбрана категория из селектора: ${category}`);
+                setSelectedCategory(category);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '8px 12px',
+                marginBottom: '5px',
+                background: selectedCategory === category 
+                  ? 'rgba(240, 248, 255, 0.3)' 
+                  : 'rgba(240, 248, 255, 0.1)',
+                border: selectedCategory === category 
+                  ? '1px solid rgba(240, 248, 255, 0.8)' 
+                  : '1px solid rgba(240, 248, 255, 0.3)',
+                borderRadius: '5px',
+                color: '#f0f8ff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: selectedCategory === category ? 'bold' : 'normal',
+                textAlign: 'left',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedCategory !== category) {
+                  e.currentTarget.style.background = 'rgba(240, 248, 255, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(240, 248, 255, 0.5)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedCategory !== category) {
+                  e.currentTarget.style.background = 'rgba(240, 248, 255, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(240, 248, 255, 0.3)';
+                }
+              }}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
       )}
       
       {/* Эхо-волна визуализация (полукруг для прямого импульса, круг для обратного) */}
@@ -3095,28 +3345,29 @@ export function MapView({ onShopClick, onResetMap, selectedCategory, onCategoryC
                 <button
                   key={city.name}
                   onClick={() => {
-                    console.log(`🗺️ Выбор города через модальное окно: ${city.name}, текущий: ${selectedCity?.name}`);
+                    console.log(`🗺️ Выбор города через модальное окно: ${city.name}`);
                     setShowCitySelector(false);
                     
-                    // Сбрасываем категорию
-                    if (onCategoryChange) {
-                      onCategoryChange(null);
-                    }
+                    // Обновляем selectedCity через store
+                    const { selectCity } = useMapStore.getState();
+                    selectCity(city);
                     
                     // Зумим к городу
                     if (map.current) {
                       // Устанавливаем флаг перед программным переходом
                       skipAutoLoadRef.current = true;
                       
+                      const targetZoom = 12;
+                      
                       map.current.flyTo({
                         center: [city.lng, city.lat],
-                        zoom: 12,
+                        zoom: targetZoom,
                         duration: 2000
                       });
                       
                       // Устанавливаем отложенную загрузку ПОСЛЕ окончания анимации
                       pendingCityLoadRef.current = city;
-                      console.log(`🗺️ Отложенная загрузка установлена для ${city.name} (модальное окно)`);
+                      console.log(`🗺️ Отложенная загрузка установлена для ${city.name}`);
                     }
                   }}
                   style={{
