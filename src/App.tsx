@@ -14,12 +14,14 @@ export function App() {
   const mapResetRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    console.log('🔵 App: Начало загрузки данных');
     // Загрузка данных параллельно с показом экрана загрузки (3 сек)
     Promise.all([
       api.getCities(),
       api.getAllShops(),
       new Promise(resolve => setTimeout(resolve, 3000)) // Минимум 3 секунды загрузки
     ]).then(([citiesData, allShops]) => {
+      console.log('🟢 App: Данные загружены', { cities: citiesData.length, shops: allShops.length });
       // Добавляем активность к магазинам
       const shopsWithActivity = allShops.map((shop: any) => ({
         ...shop,
@@ -44,8 +46,12 @@ export function App() {
       setCities(citiesWithShopCounts);
       
       // Скрываем загрузку
+      console.log('✅ App: Скрываем загрузку, показываем MapView');
       setIsLoading(false);
       console.log(`📦 Загружено: ${shopsWithActivity.length} магазинов`);
+    }).catch(error => {
+      console.error('❌ App: Ошибка загрузки данных:', error);
+      setIsLoading(false);
     });
     
     // Настройка кнопки "Назад" в Telegram
@@ -77,12 +83,14 @@ export function App() {
       {isLoading ? (
         <LoadingScreen />
       ) : (
-        <MapView 
-          onShopClick={setSelectedShop} 
-          onResetMap={(fn) => { mapResetRef.current = fn; }}
-        />
+        <>
+          <MapView 
+            onShopClick={setSelectedShop} 
+            onResetMap={(fn) => { mapResetRef.current = fn; }}
+          />
+          {selectedShop && <ShopInfo shop={selectedShop} onClose={() => setSelectedShop(null)} />}
+        </>
       )}
-      {selectedShop && <ShopInfo shop={selectedShop} onClose={() => setSelectedShop(null)} />}
     </div>
   );
 }
