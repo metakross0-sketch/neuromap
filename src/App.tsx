@@ -1,14 +1,12 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'preact/compat';
+import { useEffect, useState, useRef } from 'preact/hooks';
+import { MapView } from './components/MapView';
 import { SimpleCitySelector } from './components/SimpleCitySelector';
 import { ActivationRitual } from './components/ActivationRitual';
+import { ShopInfo } from './components/ShopInfo';
 import { useMapStore } from './store/mapStore';
 import { api, updateCitiesWithoutShops } from './api/client';
 import type { Shop, City } from './types';
 import { showBackButton, hideBackButton, hapticFeedback } from './utils/telegram';
-
-// Lazy load тяжёлых компонентов для быстрого первого рендера
-const MapView = lazy(() => import('./components/MapView').then(m => ({ default: m.MapView })));
-const ShopInfo = lazy(() => import('./components/ShopInfo').then(m => ({ default: m.ShopInfo })));
 
 type AppScreen = 'activation' | 'city-select' | 'map';
 
@@ -99,25 +97,12 @@ export function App() {
       {currentScreen === 'activation' && <ActivationRitual onActivate={handleActivation} />}
       {currentScreen === 'city-select' && <SimpleCitySelector onCitySelected={handleCitySelected} />}
       {currentScreen === 'map' && selectedCity && (
-        <Suspense fallback={<div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          height: '100vh', 
-          background: '#000', 
-          color: '#f0f8ff' 
-        }}>Загрузка карты...</div>}>
-          <MapView 
-            onShopClick={setSelectedShop} 
-            onResetMap={(fn) => { mapResetRef.current = fn; }}
-          />
-        </Suspense>
+        <MapView 
+          onShopClick={setSelectedShop} 
+          onResetMap={(fn) => { mapResetRef.current = fn; }}
+        />
       )}
-      {selectedShop && (
-        <Suspense fallback={null}>
-          <ShopInfo shop={selectedShop} onClose={() => setSelectedShop(null)} />
-        </Suspense>
-      )}
+      {selectedShop && <ShopInfo shop={selectedShop} onClose={() => setSelectedShop(null)} />}
     </div>
   );
 }
