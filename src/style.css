@@ -540,7 +540,9 @@ items {
   .shop-info__items {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
-}x) {
+}
+
+@media (min-width: 768px) {
   .city-selector__content {
     max-width: 500px;
   }
