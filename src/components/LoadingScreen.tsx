@@ -97,7 +97,7 @@ export function LoadingScreen() {
       justifyContent: 'center',
       zIndex: 1000
     }}>
-      {/* Логотип с анимированными квадратиками */}
+      {/* Логотип с дорогами расходящимися к краям */}
       <div style={{
         position: 'relative',
         zIndex: 101,
@@ -105,45 +105,163 @@ export function LoadingScreen() {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        {/* Анимированные квадратики вокруг логотипа */}
+        {/* Геометрические дороги от логотипа к краям экрана */}
         <div style={{
           position: 'absolute',
-          width: '280px',
-          height: '280px',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(12, 1fr)',
-          gridTemplateRows: 'repeat(12, 1fr)',
-          gap: '8px'
+          width: '100vw',
+          height: '100vh',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none'
         }}>
-          {Array.from({ length: 44 }, (_, i) => {
-            // Только периметр: верхний ряд, нижний ряд, левый столбец, правый столбец
-            const isTop = i < 12;
-            const isBottom = i >= 32 && i < 44;
-            const isLeft = i >= 12 && i < 32 && i % 2 === 0;
-            const isRight = i >= 12 && i < 32 && i % 2 === 1;
-            
-            if (!isTop && !isBottom && !isLeft && !isRight) return null;
-            
-            const row = isTop ? 0 : isBottom ? 11 : Math.floor((i - 12) / 2) + 1;
-            const col = isTop ? i : isBottom ? (i - 32) : isLeft ? 0 : 11;
-            
-            return (
-              <div
-                key={i}
-                style={{
-                  gridRow: row + 1,
-                  gridColumn: col + 1,
-                  width: '12px',
-                  height: '12px',
-                  backgroundColor: '#ffffff',
-                  opacity: 0,
-                  borderRadius: '2px',
-                  animation: `loadSquare 2s infinite`,
-                  animationDelay: `${i * 0.05}s`
-                }}
-              />
-            );
-          })}
+          {/* Горизонтальная дорога влево */}
+          {Array.from({ length: 20 }, (_, i) => (
+            <div
+              key={`left-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: '50%',
+                left: `calc(50% - ${(i + 1) * 30}px)`,
+                transform: 'translateY(-50%)',
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Горизонтальная дорога вправо */}
+          {Array.from({ length: 20 }, (_, i) => (
+            <div
+              key={`right-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: '50%',
+                left: `calc(50% + ${(i + 1) * 30}px)`,
+                transform: 'translateY(-50%)',
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Вертикальная дорога вверх */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`top-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% - ${(i + 1) * 30}px)`,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Вертикальная дорога вниз */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`bottom-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% + ${(i + 1) * 30}px)`,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Диагональная дорога: верх-лево */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`tl-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% - ${(i + 1) * 21}px)`,
+                left: `calc(50% - ${(i + 1) * 21}px)`,
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Диагональная дорога: верх-право */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`tr-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% - ${(i + 1) * 21}px)`,
+                left: `calc(50% + ${(i + 1) * 21}px)`,
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Диагональная дорога: низ-лево */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`bl-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% + ${(i + 1) * 21}px)`,
+                left: `calc(50% - ${(i + 1) * 21}px)`,
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
+          
+          {/* Диагональная дорога: низ-право */}
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={`br-${i}`}
+              style={{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '2px',
+                top: `calc(50% + ${(i + 1) * 21}px)`,
+                left: `calc(50% + ${(i + 1) * 21}px)`,
+                animation: 'loadSquare 2s infinite',
+                animationDelay: `${i * 0.1}s`
+              }}
+            />
+          ))}
         </div>
         
         {/* Логотип */}
