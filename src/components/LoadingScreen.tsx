@@ -108,7 +108,7 @@ export function LoadingScreen() {
           alt="NeuroMap"
           style={{
             width: '200px',
-            height: '200px',
+            height: 'auto',
             objectFit: 'contain',
             filter: 'drop-shadow(0 0 30px rgba(240, 248, 255, 0.5))',
             animation: 'pulse 2s infinite'
