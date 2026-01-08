@@ -43,12 +43,6 @@ export function App() {
       updateCitiesWithoutShops(citiesWithShopCounts);
       setCities(citiesWithShopCounts);
       
-      // Автоматически выбираем первый город с магазинами
-      const firstCityWithShops = citiesWithShopCounts.find((c: City) => typeof c.shops === 'number' && c.shops > 0);
-      if (firstCityWithShops) {
-        setSelectedCity(firstCityWithShops);
-      }
-      
       // Скрываем загрузку
       setIsLoading(false);
       console.log(`📦 Загружено: ${shopsWithActivity.length} магазинов`);
